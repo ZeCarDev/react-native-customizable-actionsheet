@@ -1,20 +1,46 @@
 /**
  * a  customizable RN ActionSheet
  */
-import React, { Component, PropTypes } from 'react';
+import React, { Component } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   Animated,
-  TouchableNativeFeedback,
+  TouchableOpacity,
   PixelRatio,
   ScrollView,
   Dimensions,
   Modal,
-  SafeAreaView,
-  Easing
+  Easing,
 } from 'react-native';
+import SafeAreaView from 'react-native-safe-area-view';
+import PropTypes from 'prop-types';
+import debounce from 'lodash.debounce';
+
+const withPreventDoubleClick = (WrappedComponent) => {
+  class PreventDoubleClick extends React.PureComponent {
+    debouncedOnPress = () => {
+      if (this.props.onPress) this.props.onPress();
+    };
+
+    onPress = debounce(this.debouncedOnPress, 600, {
+      leading: true,
+      trailing: false,
+    });
+
+    render() {
+      return <WrappedComponent {...this.props} onPress={this.onPress} />;
+    }
+  }
+
+  PreventDoubleClick.displayName = `withPreventDoubleClick(${WrappedComponent.displayName ||
+    WrappedComponent.name})`;
+  return PreventDoubleClick;
+};
+
+const TouchableOpacityEx = withPreventDoubleClick(TouchableOpacity);
+
 const MIN_WIDTH = 1/PixelRatio.get();
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -27,7 +53,7 @@ export default class ReactNativeCustomizableActionSheet extends Component {
       shown: false, //是否处于显示状态
     };
   }
-  
+
   // hide
   hide = () => {
     const {animationType} = this.props;
@@ -37,7 +63,7 @@ export default class ReactNativeCustomizableActionSheet extends Component {
       easing: animationType
     }).start(this._toggleShown);//这个函数必须放到start里面，否则没有动画效果
   }
-  
+
   // show
   show = () => {
     this._toggleShown();
@@ -63,22 +89,21 @@ export default class ReactNativeCustomizableActionSheet extends Component {
 			// this._toggleShown();
 		}
   }
-  
+
   _toggleShown = () => {
     this.setState({
       shown: !this.state.shown
     });
   }
-  
+
   // 渲染button
   _renderButton = () => {
     const {funcs,actions,buttonHeight} = this.props;
     return actions.map((val, i) => {
       return (
-        <TouchableNativeFeedback
+        <TouchableOpacityEx
           onPress={funcs[i]}
           key={i}
-          background={TouchableNativeFeedback.Ripple('#108eeb', false)}
         >
           <View style={{height: buttonHeight, justifyContent: 'center', alignItems: 'center', borderBottomWidth: MIN_WIDTH, borderColor: '#ccc', backgroundColor: '#fff'}}>
             {typeof val === 'string'?
@@ -87,11 +112,11 @@ export default class ReactNativeCustomizableActionSheet extends Component {
               val
             }
           </View>
-        </TouchableNativeFeedback>
+        </TouchableOpacityEx>
       );
     });
   }
-  
+
   // 渲染标题
   _renderTitle = () => {
     const {title} = this.props;
@@ -105,7 +130,7 @@ export default class ReactNativeCustomizableActionSheet extends Component {
       </View>
     );
   }
-  
+
   render() {
     const {
       sheetAnim,
@@ -135,7 +160,8 @@ export default class ReactNativeCustomizableActionSheet extends Component {
         transparent={true}
         onRequestClose={this._toggle}
       >
-        <SafeAreaView style={{flex: 1, flexDirection: 'row', backgroundColor: 'rgba(0,0,0,.2)'}}>
+        <SafeAreaView style={{flex: 1, flexDirection: 'row', backgroundColor: 'rgba(0,0,0,.2)'}} 
+          forceInset={{ bottom: 'always', top: 'never' }}>
           {/* 遮挡的overlay */}
           <Text onPress={this._toggle} style={{position: 'absolute', top: 0, right: 0, bottom: 0, left: 0}}/>
           <Animated.View
@@ -182,4 +208,3 @@ ReactNativeCustomizableActionSheet.propTypes = {
   buttonComponentsHeight: PropTypes.number,
   animationType: PropTypes.any,
 };
-
